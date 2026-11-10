@@ -1,0 +1,11 @@
+[package]
+name = "gt-shell"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+windows = { workspace = true }
+windows-core = { workspace = true }
+gt-ipc = { workspace = true }
+tracing = { workspace = true }
+parking_lot = { workspace = true }

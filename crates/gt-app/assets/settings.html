@@ -1,0 +1,213 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Settings</title>
+<style>
+  :root {
+    --bg: #f3f3f3; --panel: #fbfbfb; --card: #ffffff; --line: #e5e5e5; --text: #1b1b1b; --text2: #5c5c5c; --text3: #8a8a8a;
+    --accent: #005fb8; --accent-text: #ffffff; --hover: rgba(0,0,0,.035); --input: #ffffff; --input-line: #d1d1d1; --danger: #c42b1c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #202020; --panel: #1c1c1c; --card: #2b2b2b; --line: #1d1d1d; --text: #ffffff; --text2: #c5c5c5; --text3: #9a9a9a;
+      --accent: #60cdff; --accent-text: #000000; --hover: rgba(255,255,255,.04); --input: #2d2d2d; --input-line: #3a3a3a; --danger: #ff99a4;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 14px "Segoe UI Variable Text", "Segoe UI", sans-serif; }
+  body { display: flex; overflow: hidden; user-select: none; }
+  nav { width: 240px; flex: none; padding: 18px 8px; display: flex; flex-direction: column; gap: 2px; }
+  nav .brand { display: flex; align-items: center; gap: 10px; padding: 4px 12px 18px; font-weight: 600; }
+  nav .brand .logo { width: 28px; height: 28px; border-radius: 7px; background: linear-gradient(135deg, #3a8dff, #1b5fd1); position: relative; }
+  nav .brand .logo::after { content: ""; position: absolute; left: 7px; top: 6px; width: 10px; height: 10px; border: 2.5px solid #fff; border-radius: 50%; }
+  nav a { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: 6px; color: var(--text); text-decoration: none; position: relative; }
+  nav a .ic { font: 16px "Segoe Fluent Icons", "Segoe MDL2 Assets"; width: 18px; text-align: center; }
+  nav a:hover { background: var(--hover); }
+  nav a.on { background: var(--hover); }
+  nav a.on::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 2px; background: var(--accent); }
+  main { flex: 1; overflow-y: auto; padding: 24px 36px 40px 24px; }
+  h1 { font: 600 28px "Segoe UI Variable Display", "Segoe UI", sans-serif; margin: 6px 0 22px; }
+  h2 { font-size: 14px; font-weight: 600; margin: 26px 0 8px; }
+  section { display: none; max-width: 860px; }
+  section.on { display: block; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 6px; margin-bottom: 4px; padding: 14px 18px; display: flex; align-items: center; gap: 16px; min-height: 68px; }
+  .card .t { flex: 1; min-width: 0; }
+  .card .t b { display: block; font-weight: 400; }
+  .card .t small { display: block; color: var(--text2); font-size: 12px; margin-top: 2px; line-height: 1.35; }
+  .card .ic { font: 20px "Segoe Fluent Icons", "Segoe MDL2 Assets"; width: 22px; color: var(--text); }
+  .toggle { display: flex; align-items: center; gap: 12px; color: var(--text2); font-size: 13px; }
+  .toggle input { appearance: none; width: 40px; height: 20px; border-radius: 10px; border: 1px solid var(--text2); position: relative; margin: 0; cursor: default; background: transparent; }
+  .toggle input::after { content: ""; position: absolute; top: 3px; left: 4px; width: 12px; height: 12px; border-radius: 50%; background: var(--text2); transition: left .12s; }
+  .toggle input:checked { background: var(--accent); border-color: var(--accent); }
+  .toggle input:checked::after { left: 22px; background: var(--accent-text); }
+  select, input[type=number], input[type=text] { font: inherit; color: var(--text); background: var(--input); border: 1px solid var(--input-line); border-bottom-color: var(--text3); border-radius: 4px; padding: 5px 10px; min-width: 160px; outline: none; }
+  select:focus, input:focus { border-bottom: 2px solid var(--accent); }
+  input[type=number] { width: 120px; min-width: 0; }
+  button { font: inherit; color: var(--text); background: var(--input); border: 1px solid var(--input-line); border-radius: 4px; padding: 5px 14px; cursor: default; }
+  button:hover { background: var(--hover); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  table { width: 100%; border-collapse: collapse; }
+  .fmt { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; }
+  .fmt td { padding: 6px 4px; }
+  .fmt td:first-child input { width: 120px; min-width: 0; }
+  .fmt td:last-child { text-align: right; width: 40px; }
+  .fmt .rm { font: 14px "Segoe Fluent Icons", "Segoe MDL2 Assets"; border: 0; background: transparent; padding: 6px 8px; }
+  .muted { color: var(--text2); font-size: 12px; }
+  .comp td { padding: 6px 0; border-bottom: 1px solid var(--line); }
+  .comp td:last-child { color: var(--text2); text-align: right; white-space: nowrap; padding-left: 24px; }
+  .saved { position: fixed; right: 24px; bottom: 18px; padding: 6px 14px; border-radius: 6px; background: var(--card); border: 1px solid var(--line); color: var(--text2); opacity: 0; transition: opacity .2s; }
+  .saved.on { opacity: 1; }
+</style>
+</head>
+<body>
+<nav>
+  <div class="brand"><div class="logo"></div>Gregarioustypes</div>
+  <a href="#general" class="on"><span class="ic">&#xE713;</span>General</a>
+  <a href="#formats"><span class="ic">&#xE8A5;</span>File types</a>
+  <a href="#display"><span class="ic">&#xE7F4;</span>Display</a>
+  <a href="#text"><span class="ic">&#xE8D2;</span>Text and NFO</a>
+  <a href="#engines"><span class="ic">&#xE950;</span>Engines and storage</a>
+  <a href="#about"><span class="ic">&#xE946;</span>About</a>
+</nav>
+<main>
+<section id="general" class="on">
+  <h1>General</h1>
+  <div class="card"><span class="ic">&#xE8A7;</span><div class="t"><b>Preview with Space</b><small>Press Space on a file in Explorer or on the desktop.</small></div><label class="toggle"><span></span><input type="checkbox" data-k="enabled"></label></div>
+  <div class="card"><span class="ic">&#xE8E5;</span><div class="t"><b>Also in Open and Save dialogs</b><small>Space previews the file selected in another app's file dialog.</small></div><label class="toggle"><span></span><input type="checkbox" data-k="file_dialogs"></label></div>
+  <div class="card"><span class="ic">&#xE740;</span><div class="t"><b>Alt+Space opens in full screen</b><small>Like Option+Space in Quick Look.</small></div><label class="toggle"><span></span><input type="checkbox" data-k="alt_space_fullscreen"></label></div>
+  <div class="card"><span class="ic">&#xE73F;</span><div class="t"><b>Hide when another app comes to the front</b><small>Pinned previews stay.</small></div><label class="toggle"><span></span><input type="checkbox" data-k="hide_on_focus_loss"></label></div>
+  <div class="card"><span class="ic">&#xE768;</span><div class="t"><b>Play videos and sounds automatically</b></div><label class="toggle"><span></span><input type="checkbox" data-k="autoplay"></label></div>
+  <div class="card"><span class="ic">&#xE7E8;</span><div class="t"><b>Start with Windows</b></div><label class="toggle"><span></span><input type="checkbox" data-k="start_with_windows"></label></div>
+</section>
+
+<section id="formats">
+  <h1>File types</h1>
+  <p class="muted">Every file is recognised by its content and shown with the best engine. Choose another one for an extension here, for example to always see HTML or SVG as source text. The chosen engine is tried first; if it cannot open a file, the usual one takes over.</p>
+  <div class="fmt"><table id="fmt"></table></div>
+  <p><button id="add">Add a file type</button></p>
+</section>
+
+<section id="display">
+  <h1>Display</h1>
+  <div class="card"><span class="ic">&#xE706;</span><div class="t"><b>Peak brightness of the display</b><small>Used to tone-map HDR images and videos. Leave empty to use what Windows reports; set it when the driver value is wrong (see your display's specifications).</small></div><input type="number" min="80" max="10000" step="10" placeholder="Automatic" data-k="display.peak_nits_override" data-null="1"><span class="muted">nits</span></div>
+</section>
+
+<section id="text">
+  <h1>Text and NFO</h1>
+  <div class="card"><span class="ic">&#xE751;</span><div class="t"><b>Wrap long lines</b></div><label class="toggle"><span></span><input type="checkbox" data-k="text.wrap"></label></div>
+  <div class="card"><span class="ic">&#xE8A5;</span><div class="t"><b>Largest text shown in full</b><small>Bigger files show their beginning.</small></div><input type="number" min="1" max="1024" data-k="text.max_preview_bytes" data-scale="1048576"><span class="muted">MB</span></div>
+  <h2>NFO and ANSI art</h2>
+  <div class="card"><span class="ic">&#xE790;</span><div class="t"><b>Colours</b></div><select data-k="nfo.theme"><option value="dos">DOS (grey on black)</option><option value="white">White on black</option><option value="amber">Amber</option><option value="green">Green</option><option value="light">Light</option></select></div>
+  <div class="card"><span class="ic">&#xE71E;</span><div class="t"><b>Pixel scale</b><small>Automatic uses the largest whole multiple that fits.</small></div><select data-k="nfo.scale" data-num="1"><option value="0">Automatic</option><option value="1">1×</option><option value="2">2×</option><option value="3">3×</option><option value="4">4×</option></select></div>
+  <div class="card"><span class="ic">&#xE8E9;</span><div class="t"><b>Character width</b><small>9 pixels joins box-drawing lines like VGA text mode.</small></div><select data-k="nfo.letter_spacing" data-num="1"><option value="0">From the file (SAUCE), else 9 pixels</option><option value="8">8 pixels</option><option value="9">9 pixels</option></select></div>
+  <div class="card"><span class="ic">&#xE744;</span><div class="t"><b>Correct the aspect ratio when the file asks for it</b><small>SAUCE legacy aspect flag.</small></div><label class="toggle"><span></span><input type="checkbox" data-k="nfo.aspect_correction"></label></div>
+</section>
+
+<section id="engines">
+  <h1>Engines and storage</h1>
+  <div class="card"><span class="ic">&#xE916;</span><div class="t"><b>Release engines after</b><small>The web view, video player, LibreOffice and Blender are closed when unused for this long, and start again when needed. 0 keeps them.</small></div><input type="number" min="0" max="1440" data-k="engines.idle_minutes"><span class="muted">minutes</span></div>
+  <div class="card"><span class="ic">&#xE945;</span><div class="t"><b>Keep the web view and video player ready</b><small>The first web page, 3D model or video opens faster, at the cost of about 150 MB while idle.</small></div><label class="toggle"><span></span><input type="checkbox" data-k="engines.keep_warm"></label></div>
+  <h2>Storage</h2>
+  <div class="card"><span class="ic">&#xEDA2;</span><div class="t"><b>Converted documents and models</b><small id="cacheinfo">…</small></div><input type="number" min="100" max="200000" step="100" data-k="cache.budget_mb"><span class="muted">MB</span><button id="clear">Clear</button></div>
+  <div class="card"><span class="ic">&#xE9F9;</span><div class="t"><b>Detailed logs</b><small>For troubleshooting. Applies the next time the previewer starts.</small></div><label class="toggle"><span></span><input type="checkbox" data-k="debug_log"></label><button data-act="open-logs">Open folder</button></div>
+  <div class="card"><span class="ic">&#xE70F;</span><div class="t"><b>Settings file</b><small id="cfgpath"></small></div><button data-act="open-config">Open</button></div>
+</section>
+
+<section id="about">
+  <h1>About</h1>
+  <div class="card"><span class="ic">&#xE946;</span><div class="t"><b id="ver">Gregarioustypes</b><small>Space-bar previews for Windows. Free software under the GNU GPL, version 3 or later: github.com/sofju/Gregarioustypes. Bundled components keep their own licences; their texts are in the licenses folder.</small></div></div>
+  <h2>Bundled components</h2>
+  <div class="fmt"><table class="comp" id="comps"></table></div>
+</section>
+</main>
+<div class="saved" id="saved">Saved</div>
+<script>
+const host = window.chrome.webview;
+let S = null, ENGINES = [];
+const $ = (q) => document.querySelector(q);
+
+function get(o, path) { return path.split('.').reduce((a, k) => a == null ? a : a[k], o); }
+function put(o, path, v) { const ks = path.split('.'); const last = ks.pop(); ks.reduce((a, k) => a[k], o)[last] = v; }
+
+let savedTimer = 0;
+function save() {
+  host.postMessage({ set: S });
+  clearTimeout(savedTimer);
+  $('#saved').classList.add('on');
+  savedTimer = setTimeout(() => $('#saved').classList.remove('on'), 1200);
+}
+
+function bind() {
+  document.querySelectorAll('[data-k]').forEach((el) => {
+    const k = el.dataset.k, scale = +(el.dataset.scale || 1);
+    const v = get(S, k);
+    if (el.type === 'checkbox') el.checked = !!v;
+    else if (el.type === 'number') el.value = v == null ? '' : Math.round(v / scale);
+    else el.value = String(v);
+    el.onchange = () => {
+      let nv;
+      if (el.type === 'checkbox') nv = el.checked;
+      else if (el.type === 'number') {
+        if (el.value === '' && el.dataset.null) nv = null;
+        else { nv = Math.max(+el.min || 0, Math.min(+el.max || 1e12, Math.round(+el.value || 0))) * scale; el.value = nv / scale; }
+      } else nv = el.dataset.num ? +el.value : el.value;
+      put(S, k, nv);
+      save();
+    };
+  });
+  formats();
+}
+
+function formats() {
+  const t = $('#fmt');
+  const rows = Object.entries(S.formats || {});
+  const opts = (sel) => ENGINES.map(([id, name]) => '<option value="' + id + '"' + (id === sel ? ' selected' : '') + '>' + name + '</option>').join('');
+  t.innerHTML = rows.length ? rows.map(([ext, id]) =>
+    '<tr><td><input type="text" value=".' + ext + '" data-ext="' + ext + '"></td><td><select data-ext="' + ext + '">' + opts(id) + '</select></td><td><button class="rm" data-ext="' + ext + '" title="Remove">&#xE711;</button></td></tr>').join('')
+    : '<tr><td colspan="3" class="muted" style="padding:10px 4px;text-align:left">No file type has its own engine yet.</td></tr>';
+  t.querySelectorAll('input').forEach((i) => i.onchange = () => {
+    const old = i.dataset.ext, ext = i.value.trim().replace(/^\./, '').toLowerCase();
+    const id = S.formats[old]; delete S.formats[old];
+    if (ext) S.formats[ext] = id;
+    formats(); save();
+  });
+  t.querySelectorAll('select').forEach((s) => s.onchange = () => { S.formats[s.dataset.ext] = s.value; save(); });
+  t.querySelectorAll('.rm').forEach((b) => b.onclick = () => { delete S.formats[b.dataset.ext]; formats(); save(); });
+}
+
+$('#add').onclick = () => {
+  S.formats = S.formats || {};
+  let n = 'ext'; let i = 1; while (S.formats[n]) n = 'ext' + (++i);
+  S.formats[n] = 'text';
+  formats();
+  const inputs = $('#fmt').querySelectorAll('input');
+  const last = inputs[inputs.length - 1]; last.focus(); last.select();
+};
+$('#clear').onclick = () => host.postMessage({ action: 'clear-cache' });
+document.querySelectorAll('[data-act]').forEach((b) => b.onclick = () => host.postMessage({ action: b.dataset.act }));
+
+function go(hash) {
+  const a = document.querySelector('nav a[href="' + hash + '"]');
+  if (!a) return;
+  document.querySelectorAll('nav a').forEach((x) => x.classList.toggle('on', x === a));
+  document.querySelectorAll('section').forEach((s) => s.classList.toggle('on', '#' + s.id === hash));
+}
+document.querySelectorAll('nav a').forEach((a) => a.onclick = (e) => { e.preventDefault(); go(a.getAttribute('href')); });
+if (location.hash) go(location.hash);
+document.addEventListener('contextmenu', (e) => { if (!(e.target instanceof HTMLInputElement)) e.preventDefault(); });
+
+host.addEventListener('message', (e) => {
+  const m = e.data;
+  if (m.settings) { S = m.settings; ENGINES = m.engines; bind(); }
+  if (m.info) {
+    $('#ver').textContent = 'Gregarioustypes ' + m.info.version;
+    $('#cfgpath').textContent = m.info.config;
+    $('#comps').innerHTML = m.info.components.map(([n, v]) => '<tr><td>' + n + '</td><td>' + v + '</td></tr>').join('');
+  }
+  if (m.cache) $('#cacheinfo').textContent = 'LibreOffice PDFs, Blender models, Ghostscript and BDInfo results. ' + m.cache + ' in use; the oldest are removed beyond this size.';
+});
+host.postMessage({ get: true });
+</script>
+</body>
+</html>

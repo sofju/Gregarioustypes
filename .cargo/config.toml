@@ -1,0 +1,8 @@
+[target.x86_64-pc-windows-msvc]
+# Static CRT, so no VC++ runtime is needed. Generic x86-64 code (no AVX2
+# requirement) so the release runs on any 64-bit PC.
+rustflags = ["-C", "target-feature=+crt-static"]
+
+[target.i686-pc-windows-msvc]
+# The 32-bit file-dialog helper: static CRT as well (no VC++ runtime needed).
+rustflags = ["-C", "target-feature=+crt-static"]

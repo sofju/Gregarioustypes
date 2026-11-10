@@ -1,0 +1,15 @@
+[package]
+name = "gt-fmt-media"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+windows = { workspace = true }
+gt-core = { workspace = true }
+gt-ui = { workspace = true }
+gt-render = { workspace = true }
+gt-shell = { workspace = true }
+gt-image = { path = "../gt-image" }
+parking_lot = { workspace = true }
+tracing = { workspace = true }
+rustysynth = "1.3.8"

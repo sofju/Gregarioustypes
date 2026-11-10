@@ -1,0 +1,23 @@
+[package]
+name = "gt-dialoghook"
+version.workspace = true
+edition.workspace = true
+
+# Loaded into other apps' processes by a WH_GETMESSAGE hook while their file
+# dialog is previewed: kept tiny, no allocator-heavy dependencies.
+[lib]
+name = "gt_dialoghook"
+crate-type = ["cdylib"]
+
+[dependencies]
+windows = { workspace = true }
+
+# 32-bit builds only: installs the hook for 32-bit apps (a 64-bit process
+# can't), holding it until the agent closes its stdin.
+[[bin]]
+name = "gt_dialoghook32"
+path = "src/helper.rs"
+required-features = ["helper32"]
+
+[features]
+helper32 = []

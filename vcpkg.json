@@ -1,0 +1,39 @@
+{
+  "name": "gregarioustypes",
+  "version-string": "0.1.0",
+  "builtin-baseline": "6fdd23fa0a9479a9f9a1c48178696f60cf39255d",
+  "dependencies": [
+    "libjpeg-turbo",
+    {
+      "name": "tiff",
+      "features": [
+        "jpeg",
+        "lzma",
+        "zip",
+        "zstd",
+        "webp"
+      ]
+    },
+    "libwebp",
+    {
+      "name": "libavif",
+      "features": [
+        "dav1d"
+      ]
+    },
+    {
+      "name": "libheif",
+      "default-features": false,
+      "features": [
+        "libde265",
+        "openjpeg"
+      ]
+    },
+    "libjxl",
+    "libraw",
+    "openjpeg",
+    "openexr",
+    "lcms",
+    "alembic"
+  ]
+}

@@ -1,0 +1,17 @@
+[package]
+name = "gt-fmt-web"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+windows = { workspace = true }
+windows-core = { workspace = true }
+gt-core = { workspace = true }
+gt-ui = { workspace = true }
+gt-shell = { workspace = true }
+parking_lot = { workspace = true }
+tracing = { workspace = true }
+serde_json = { workspace = true }
+webview2-com = "0.39"
+pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
+miniz_oxide = "0.8"

@@ -1,0 +1,19 @@
+[package]
+name = "gt-fmt-misc"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+windows = { workspace = true }
+gt-core = { workspace = true }
+gt-ui = { workspace = true }
+gt-render = { workspace = true }
+gt-shell = { workspace = true }
+sha1 = { workspace = true }
+sha2 = { workspace = true }
+serde_json = { workspace = true }
+parking_lot = { workspace = true }
+tracing = { workspace = true }
+quick-xml = "0.42"
+two-face = { version = "0.5", default-features = false, features = ["syntect-onig"] }
+syntect = { version = "5.3", default-features = false, features = ["parsing", "regex-onig", "dump-load"] }

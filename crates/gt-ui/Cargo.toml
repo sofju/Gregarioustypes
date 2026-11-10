@@ -1,0 +1,12 @@
+[package]
+name = "gt-ui"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+windows = { workspace = true }
+windows-core = { workspace = true }
+windows-numerics = { workspace = true }
+gt-core = { workspace = true }
+gt-render = { workspace = true }
+tracing = { workspace = true }

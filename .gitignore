@@ -1,0 +1,6 @@
+/target
+/deps
+/samples
+/vcpkg_installed
+*.pdb
+*.user

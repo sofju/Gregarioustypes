@@ -1,0 +1,442 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; user-select: none; -webkit-user-select: none;
+    font: 12.5px "Segoe UI Variable Text", "Segoe UI", sans-serif; color: #d8d8da;
+    background: radial-gradient(ellipse at 50% 42%, #2c2c2f 0%, #1f1f21 55%, #161617 100%); }
+  canvas { display: block; width: 100%; height: 100%; outline: none; touch-action: none; }
+  #msg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column;
+    gap: 10px; pointer-events: none; color: #9a9a9e; opacity: 0; transition: opacity .2s; text-align: center; padding: 0 40px; }
+  #msg.on { opacity: 1; }
+  #msg .icon { font: 28px "Segoe Fluent Icons", "Segoe MDL2 Assets"; color: #e0a060; }
+  #msg .detail { color: #77777b; font-size: 11.5px; max-width: 640px; overflow-wrap: anywhere; }
+  .spin { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #3a3a3e; border-top-color: #9a9a9e; animation: r .9s linear infinite; }
+  @keyframes r { to { transform: rotate(360deg); } }
+  #bar { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: none; align-items: center; gap: 10px;
+    height: 36px; padding: 0 14px 0 6px; border-radius: 18px; background: rgba(24, 24, 26, .86); box-shadow: 0 2px 12px rgba(0,0,0,.35);
+    backdrop-filter: blur(12px); max-width: calc(100% - 40px); box-sizing: border-box; }
+  #bar.on { display: flex; }
+  #bar button { width: 28px; height: 28px; border: 0; border-radius: 14px; background: transparent; color: #e8e8ea; cursor: default;
+    font: 14px "Segoe Fluent Icons", "Segoe MDL2 Assets"; display: flex; align-items: center; justify-content: center; }
+  #bar button:hover { background: rgba(255,255,255,.08); }
+  #bar select { background: transparent; color: #d8d8da; border: 0; font: inherit; max-width: 180px; outline: none; }
+  #bar select option { background: #2a2a2d; }
+  #seek { width: 260px; min-width: 60px; flex: 1; accent-color: #9ab8ff; }
+  #time { font-variant-numeric: tabular-nums; color: #a8a8ac; white-space: nowrap; }
+</style>
+<script type="importmap">
+{ "imports": { "three": "https://gt.localhost/__three__/build/three.module.js",
+               "three/addons/": "https://gt.localhost/__three__/examples/jsm/" } }
+</script>
+</head>
+<body>
+<canvas id="c" tabindex="0"></canvas>
+<div id="msg"></div>
+<div id="bar">
+  <button id="play" title="Play / pause"></button>
+  <select id="clip" title="Animation"></select>
+  <input id="seek" type="range" min="0" max="1000" value="0" step="1">
+  <span id="time"></span>
+</div>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { KTX2Loader } from 'three/addons/loaders/KTX2Loader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+
+const LIB = 'https://gt.localhost/__three__/examples/jsm/';
+const host = window.chrome && window.chrome.webview;
+const send = (m) => host && host.postMessage(m);
+
+const canvas = document.getElementById('c');
+const msg = document.getElementById('msg');
+const bar = document.getElementById('bar');
+const playBtn = document.getElementById('play');
+const clipSel = document.getElementById('clip');
+const seek = document.getElementById('seek');
+const timeLbl = document.getElementById('time');
+
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setClearColor(0x000000, 0);
+renderer.toneMapping = THREE.NeutralToneMapping;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFShadowMap;
+
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 1.0;
+
+const camera = new THREE.PerspectiveCamera(35, 1, 0.01, 1000);
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+controls.dampingFactor = 0.14;
+controls.screenSpacePanning = true;
+controls.zoomToCursor = true;
+
+// A soft key light from above for a little modelling and the ground shadow.
+const sun = new THREE.DirectionalLight(0xffffff, 0.9);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.bias = -0.0004;
+sun.shadow.normalBias = 0.02;
+sun.shadow.radius = 4;
+scene.add(sun, sun.target);
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShadowMaterial({ opacity: 0.22, depthWrite: false }));
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+ground.visible = false;
+scene.add(ground);
+
+// Loaders other than glTF fetch textures through this manager: once nothing
+// is in flight, a texture still without an image failed to load (missing file)
+// and is dropped, so the material's own colour shows instead of black.
+const manager = new THREE.LoadingManager();
+let inflight = 0;
+{
+  const start = manager.itemStart.bind(manager), end = manager.itemEnd.bind(manager);
+  manager.itemStart = (u) => { inflight++; start(u); };
+  manager.itemEnd = (u) => { inflight = Math.max(0, inflight - 1); end(u); if (inflight === 0) setTimeout(fixTextures, 0); };
+}
+const MAPS = ['map', 'normalMap', 'bumpMap', 'specularMap', 'emissiveMap', 'alphaMap', 'aoMap', 'roughnessMap', 'metalnessMap', 'lightMap', 'displacementMap'];
+let fixedFor = null;
+function fixTextures() {
+  if (!root || inflight > 0 || fixedFor === root) return;
+  fixedFor = root;
+  let dropped = 0;
+  root.traverse((o) => {
+    for (const m of [].concat(o.material || [])) {
+      for (const k of MAPS) {
+        const t = m[k];
+        if (!t || !t.isTexture || t.isCompressedTexture || t.isDataTexture) continue;
+        const img = t.image;
+        const broken = !img || (img instanceof HTMLImageElement && !img.naturalWidth) || (img.width === 0 && !img.data);
+        if (broken) { m[k] = null; m.needsUpdate = true; dropped++; }
+      }
+    }
+  });
+  if (dropped) { send({ type: 'missing', count: dropped }); dirty = true; }
+}
+
+let gltfLoader = null;
+function gltf() {
+  if (gltfLoader) return gltfLoader;
+  const draco = new DRACOLoader().setDecoderPath(LIB + 'libs/draco/gltf/');
+  const ktx2 = new KTX2Loader().setTranscoderPath(LIB + 'libs/basis/').detectSupport(renderer);
+  gltfLoader = new GLTFLoader().setDRACOLoader(draco).setKTX2Loader(ktx2).setMeshoptDecoder(MeshoptDecoder);
+  // Separate roughness/metalness/opacity/bump textures written by our FBX/OBJ converter.
+  gltfLoader.register((parser) => ({
+    name: 'GT_maps',
+    extendMaterialParams(index, params) {
+      const def = parser.json.materials[index];
+      const ext = def && def.extensions && def.extensions.GT_maps;
+      if (!ext) return Promise.resolve();
+      const p = [];
+      if (ext.roughness) p.push(parser.assignTexture(params, 'roughnessMap', ext.roughness));
+      if (ext.metalness) p.push(parser.assignTexture(params, 'metalnessMap', ext.metalness));
+      if (ext.alpha) { p.push(parser.assignTexture(params, 'alphaMap', ext.alpha)); params.transparent = true; }
+      if (ext.bump) { p.push(parser.assignTexture(params, 'bumpMap', ext.bump)); params.bumpScale = ext.bump.scale ?? 1; }
+      return Promise.all(p);
+    }
+  }));
+  return gltfLoader;
+}
+
+let root = null, mixer = null, action = null, clips = [], playing = false;
+let home = null, wire = false, loadId = 0, dirty = true, statusTimer = 0;
+const clock = new THREE.Clock();
+
+function status(html, delay = 0) {
+  clearTimeout(statusTimer);
+  if (!html) { msg.classList.remove('on'); return; }
+  const show = () => { msg.innerHTML = html; msg.classList.add('on'); };
+  if (delay) statusTimer = setTimeout(show, delay); else show();
+}
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+
+function dispose(obj) {
+  obj.traverse((o) => {
+    if (o.geometry) o.geometry.dispose();
+    for (const m of [].concat(o.material || [])) {
+      for (const k in m) { const v = m[k]; if (v && v.isTexture) v.dispose(); }
+      m.dispose();
+    }
+  });
+}
+
+function clear() {
+  ++loadId;
+  if (mixer) { mixer.stopAllAction(); mixer = null; }
+  action = null; clips = []; playing = false;
+  bar.classList.remove('on');
+  if (root) { scene.remove(root); dispose(root); root = null; }
+  ground.visible = false;
+  status(null);
+  renderer.renderLists.dispose();
+  dirty = true;
+}
+
+
+function frame(obj) {
+  const box = new THREE.Box3().setFromObject(obj);
+  if (box.isEmpty() || !isFinite(box.min.x)) box.set(new THREE.Vector3(-1, -1, -1), new THREE.Vector3(1, 1, 1));
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  const radius = Math.max(size.length() / 2, 1e-6);
+  const dir = new THREE.Vector3(0.62, 0.42, 1).normalize();
+  // Closest distance where every corner of the box fits in 86% of the view.
+  const right = new THREE.Vector3().crossVectors(camera.up, dir).normalize();
+  const up = new THREE.Vector3().crossVectors(dir, right).normalize();
+  const tv = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * 0.86;
+  const th = tv * camera.aspect;
+  let dist = 0;
+  const c = new THREE.Vector3();
+  for (const x of [box.min.x, box.max.x]) for (const y of [box.min.y, box.max.y]) for (const z of [box.min.z, box.max.z]) {
+    c.set(x, y, z).sub(center);
+    const along = c.dot(dir);
+    dist = Math.max(dist, along + Math.abs(c.dot(right)) / th, along + Math.abs(c.dot(up)) / tv);
+  }
+  if (!(dist > 0)) dist = radius * 3;
+  const pos = center.clone().addScaledVector(dir, dist);
+  camera.near = dist / 200; camera.far = dist * 50 + radius * 10;
+  camera.updateProjectionMatrix();
+  home = { pos, target: center.clone(), dist };
+  camera.position.copy(pos);
+  controls.target.copy(center);
+  controls.minDistance = radius * 0.01;
+  controls.maxDistance = dist * 20;
+  controls.update();
+  // Ground and shadow just under the model.
+  const r = Math.max(size.x, size.z, size.y * 0.5) * 0.5;
+  ground.scale.set(r * 12, r * 12, 1);
+  ground.position.set(center.x, box.min.y - radius * 0.001, center.z);
+  ground.visible = true;
+  sun.position.set(center.x + radius * 0.6, center.y + radius * 3, center.z + radius * 0.9);
+  sun.target.position.copy(center);
+  const sc = sun.shadow.camera;
+  sc.left = sc.bottom = -radius * 1.6; sc.right = sc.top = radius * 1.6;
+  sc.near = radius * 0.1; sc.far = radius * 8;
+  sc.updateProjectionMatrix();
+  return { box, size };
+}
+
+let flight = null;
+function resetView() {
+  if (!home) return;
+  flight = { t0: performance.now(), from: camera.position.clone(), fromT: controls.target.clone() };
+  dirty = true;
+}
+
+function setWire(on) {
+  wire = on;
+  if (root) root.traverse((o) => { for (const m of [].concat(o.material || [])) if ('wireframe' in m) m.wireframe = on; });
+  dirty = true;
+}
+
+function fmtTime(s) { const m = Math.floor(s / 60); return m + ':' + String(Math.floor(s % 60)).padStart(2, '0') + (s < 10 ? '.' + Math.floor((s * 10) % 10) : ''); }
+function updateBar() {
+  if (!action) return;
+  const d = action.getClip().duration || 0;
+  const t = d ? action.time % d : 0;
+  if (!seeking) seek.value = d ? Math.round(t / d * 1000) : 0;
+  timeLbl.textContent = fmtTime(t) + ' / ' + fmtTime(d);
+  playBtn.textContent = playing ? '' : '';
+}
+function playClip(i) {
+  if (!mixer || !clips[i]) return;
+  mixer.stopAllAction();
+  action = mixer.clipAction(clips[i]);
+  action.reset().play();
+  playing = true;
+  updateBar();
+}
+let seeking = false;
+playBtn.onclick = () => { playing = !playing; updateBar(); dirty = true; };
+clipSel.onchange = () => { playClip(+clipSel.value); dirty = true; };
+seek.oninput = () => { seeking = true; if (action) { action.time = (+seek.value / 1000) * action.getClip().duration; mixer.update(0); updateBar(); dirty = true; } };
+seek.onchange = () => { seeking = false; };
+
+function stats(obj, size) {
+  let triangles = 0, vertices = 0, meshes = 0, points = 0, lines = 0, skinned = 0, morphs = 0;
+  const mats = new Set(), texs = new Set();
+  obj.traverse((o) => {
+    const g = o.geometry;
+    if (!g || !g.attributes || !g.attributes.position) return;
+    const n = g.attributes.position.count;
+    const inst = o.isInstancedMesh ? o.count : 1;
+    if (o.isMesh) {
+      meshes++;
+      triangles += Math.floor((g.index ? g.index.count : n) / 3) * inst;
+      vertices += n;
+      if (o.isSkinnedMesh) skinned++;
+      if (g.morphAttributes && g.morphAttributes.position) morphs = Math.max(morphs, g.morphAttributes.position.length);
+    } else if (o.isPoints) points += n;
+    else if (o.isLine) lines++;
+    for (const m of [].concat(o.material || [])) {
+      mats.add(m);
+      for (const k in m) { const v = m[k]; if (v && v.isTexture) texs.add(v.source || v); }
+    }
+  });
+  return { triangles, vertices, meshes, points, lines, skinned, morphs, materials: mats.size, textures: texs.size,
+    animations: clips.map((c) => ({ name: c.name, duration: c.duration })), size: [size.x, size.y, size.z] };
+}
+
+async function loadAny(m) {
+  const t = m.type;
+  if (t === 'gltf') {
+    const g = await gltf().loadAsync(m.url);
+    return { obj: g.scene || (g.scenes && g.scenes[0]) || new THREE.Group(), clips: g.animations || [] };
+  }
+  if (t === 'usd') {
+    const { USDLoader } = await import(LIB + 'loaders/USDLoader.js');
+    const g = await new USDLoader(manager).loadAsync(m.url);
+    return { obj: g, clips: g.animations || [] };
+  }
+  if (t === 'dae') {
+    const { ColladaLoader } = await import(LIB + 'loaders/ColladaLoader.js');
+    const r = await new ColladaLoader(manager).loadAsync(m.url);
+    return { obj: r.scene, clips: r.animations || r.scene.animations || [] };
+  }
+  if (t === 'ply') {
+    const { PLYLoader } = await import(LIB + 'loaders/PLYLoader.js');
+    const geo = await new PLYLoader(manager).loadAsync(m.url);
+    const colors = geo.hasAttribute('color');
+    let o;
+    // Faces give an index; vertices alone are a point cloud.
+    if (geo.index) {
+      if (!geo.hasAttribute('normal')) geo.computeVertexNormals();
+      o = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: colors ? 0xffffff : 0xb8bcc6, vertexColors: colors, roughness: 0.6, side: THREE.DoubleSide }));
+    } else {
+      // Point cloud.
+      geo.computeBoundingSphere();
+      const s = geo.boundingSphere ? geo.boundingSphere.radius / 400 : 0.01;
+      o = new THREE.Points(geo, new THREE.PointsMaterial({ size: s, vertexColors: colors, color: colors ? 0xffffff : 0xb8bcc6 }));
+    }
+    return { obj: new THREE.Group().add(o), clips: [] };
+  }
+  if (t === '3mf') {
+    const { ThreeMFLoader } = await import(LIB + 'loaders/3MFLoader.js');
+    const g = await new ThreeMFLoader(manager).loadAsync(m.url);
+    g.rotation.x = -Math.PI / 2;
+    return { obj: new THREE.Group().add(g), clips: [] };
+  }
+  if (t === '3ds') {
+    const { TDSLoader } = await import(LIB + 'loaders/TDSLoader.js');
+    const g = await new TDSLoader(manager).loadAsync(m.url);
+    g.rotation.x = -Math.PI / 2;
+    return { obj: new THREE.Group().add(g), clips: [] };
+  }
+  throw new Error('Unknown model type ' + t);
+}
+
+async function load(m) {
+  clear();
+  const id = loadId;
+  status('<div class="spin"></div><div>Loading…</div>', 250);
+  const t0 = performance.now();
+  let r;
+  try {
+    r = await loadAny(m);
+  } catch (e) {
+    if (id !== loadId) return;
+    const text = (e && (e.message || e.toString())) || 'unknown error';
+    status('<div class="icon"></div><div>This model could not be displayed.</div><div class="detail">' + esc(text) + '</div>');
+    send({ type: 'error', message: text });
+    return;
+  }
+  if (id !== loadId) { dispose(r.obj); return; }
+  root = r.obj;
+  clips = r.clips.filter((c) => c && c.tracks && c.tracks.length);
+  const aniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  let tris = 0;
+  root.traverse((o) => {
+    if (o.isMesh) {
+      o.castShadow = true;
+      if (o.geometry && o.geometry.index) tris += o.geometry.index.count / 3;
+      // Skinned and morphing meshes move outside their bind-pose bounds.
+      if (o.isSkinnedMesh || (o.geometry && o.geometry.morphAttributes.position)) o.frustumCulled = false;
+    }
+    for (const mat of [].concat(o.material || [])) {
+      for (const k in mat) { const v = mat[k]; if (v && v.isTexture) v.anisotropy = aniso; }
+      if (wire && 'wireframe' in mat) mat.wireframe = true;
+    }
+  });
+  // Very heavy models: no shadow pass.
+  sun.castShadow = tris < 3e6;
+  scene.add(root);
+  root.updateMatrixWorld(true);
+  const { size } = frame(root);
+  if (clips.length) {
+    mixer = new THREE.AnimationMixer(root);
+    clipSel.innerHTML = clips.map((c, i) => '<option value="' + i + '">' + esc(c.name || ('Animation ' + (i + 1))) + '</option>').join('');
+    clipSel.style.display = clips.length > 1 ? '' : 'none';
+    bar.classList.add('on');
+    playClip(0);
+  }
+  status(null);
+  dirty = true;
+  if (m.type !== 'gltf') fixTextures();
+  const s = stats(root, size);
+  s.ms = Math.round(performance.now() - t0);
+  send({ type: 'loaded', stats: s });
+}
+
+function resize() {
+  const w = window.innerWidth, h = window.innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / Math.max(h, 1);
+  camera.updateProjectionMatrix();
+  dirty = true;
+}
+window.addEventListener('resize', resize);
+resize();
+
+controls.addEventListener('change', () => { dirty = true; flight = null; });
+canvas.addEventListener('dblclick', resetView);
+document.addEventListener('contextmenu', (e) => e.preventDefault());
+// Keys the viewer handles itself (close, next/previous file, full screen).
+const KEYS = { ' ': 0x20, Escape: 0x1B, ArrowLeft: 0x25, ArrowUp: 0x26, ArrowRight: 0x27, ArrowDown: 0x28, Enter: 0x0D, F11: 0x7A };
+document.addEventListener('keydown', (e) => {
+  if (e.target === clipSel && e.key.startsWith('Arrow')) return;
+  if (e.key in KEYS && !e.ctrlKey && !e.altKey) { e.preventDefault(); send({ gtKey: KEYS[e.key] }); return; }
+  if (e.key === 'Home' || e.key === 'f') resetView();
+  if (e.key === 'w') { setWire(!wire); send({ type: 'wire', on: wire }); }
+  if (e.key === 'k' && action) { playing = !playing; updateBar(); }
+});
+
+function tick() {
+  requestAnimationFrame(tick);
+  const dt = Math.min(clock.getDelta(), 0.1);
+  if (flight && home) {
+    const k = Math.min((performance.now() - flight.t0) / 320, 1);
+    const e = 1 - Math.pow(1 - k, 3);
+    camera.position.lerpVectors(flight.from, home.pos, e);
+    controls.target.lerpVectors(flight.fromT, home.target, e);
+    if (k >= 1) flight = null;
+    dirty = true;
+  }
+  if (controls.update()) dirty = true;
+  if (mixer && playing) { mixer.update(dt); updateBar(); dirty = true; }
+  if (dirty) { dirty = false; renderer.render(scene, camera); }
+}
+tick();
+
+if (host) {
+  host.addEventListener('message', (e) => {
+    const m = e.data || {};
+    if (m.load) load(m.load);
+    else if (m.clear) clear();
+    else if (m.cmd === 'reset') resetView();
+    else if (m.cmd === 'wire') setWire(!!m.on);
+  });
+  send({ gtReady: true });
+}
+</script>
+</body>
+</html>

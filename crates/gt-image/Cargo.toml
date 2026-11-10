@@ -1,0 +1,19 @@
+[package]
+name = "gt-image"
+version.workspace = true
+edition.workspace = true
+build = "build.rs"
+
+[dependencies]
+windows = { workspace = true }
+half = "2"
+png = "0.18"
+gif = "0.14"
+icns = "0.5"
+image = { version = "0.25", default-features = false, features = ["bmp", "ico", "tga", "hdr"] }
+rayon = "1"
+miniz_oxide = "0.8"
+tracing = { workspace = true }
+
+[build-dependencies]
+cc = "1"

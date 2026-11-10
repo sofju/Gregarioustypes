@@ -1,0 +1,25 @@
+[package]
+name = "gt-fmt-3d"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+windows = { workspace = true }
+gt-core = { workspace = true }
+gt-ui = { workspace = true }
+gt-fmt-web = { path = "../gt-fmt-web" }
+parking_lot = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+memmap2 = { workspace = true }
+ufbx = "0.11"
+gt-image = { path = "../gt-image" }
+png = "0.18"
+gt-fmt-doc = { path = "../gt-fmt-doc" }
+ruzstd = "0.9"
+flate2 = "1"
+gt-shell = { workspace = true }
+zip = { version = "9", default-features = false, features = ["deflate"] }
+
+[build-dependencies]
+cc = "1"

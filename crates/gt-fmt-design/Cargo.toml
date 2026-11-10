@@ -1,0 +1,20 @@
+[package]
+name = "gt-fmt-design"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+windows = { workspace = true }
+windows-numerics = { workspace = true }
+gt-core = { workspace = true }
+gt-ui = { workspace = true }
+gt-shell = { workspace = true }
+gt-fmt-doc = { path = "../gt-fmt-doc" }
+gt-fmt-media = { path = "../gt-fmt-media" }
+gt-image = { path = "../gt-image" }
+parking_lot = { workspace = true }
+memmap2 = { workspace = true }
+tracing = { workspace = true }
+memchr = "2"
+quick-xml = "0.42"
+zip = { version = "9", default-features = false, features = ["deflate"] }

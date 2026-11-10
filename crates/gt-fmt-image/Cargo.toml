@@ -1,0 +1,13 @@
+[package]
+name = "gt-fmt-image"
+version.workspace = true
+edition.workspace = true
+build = "build.rs"
+
+[dependencies]
+windows = { workspace = true }
+gt-core = { workspace = true }
+gt-ui = { workspace = true }
+gt-render = { workspace = true }
+gt-image = { path = "../gt-image" }
+tracing = { workspace = true }

@@ -1,0 +1,35 @@
+[package]
+name = "gt-app"
+version.workspace = true
+edition.workspace = true
+build = "build.rs"
+
+[[bin]]
+name = "Gregarioustypes"
+path = "src/main.rs"
+
+[dependencies]
+windows = { workspace = true }
+windows-core = { workspace = true }
+windows-numerics = { workspace = true }
+gt-core = { workspace = true }
+gt-ipc = { workspace = true }
+gt-render = { workspace = true }
+gt-ui = { workspace = true }
+gt-shell = { workspace = true }
+gt-fmt-misc = { workspace = true }
+gt-fmt-image = { path = "../gt-fmt-image" }
+gt-fmt-media = { path = "../gt-fmt-media" }
+gt-fmt-archive = { path = "../gt-fmt-archive" }
+gt-fmt-doc = { path = "../gt-fmt-doc" }
+gt-fmt-web = { path = "../gt-fmt-web" }
+gt-fmt-design = { path = "../gt-fmt-design" }
+gt-fmt-3d = { path = "../gt-fmt-3d" }
+tracing = { workspace = true }
+parking_lot = { workspace = true }
+crossbeam-channel = { workspace = true }
+serde_json = { workspace = true }
+webview2-com = "0.39"
+
+[build-dependencies]
+embed-resource = "3"
